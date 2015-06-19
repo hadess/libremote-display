@@ -1,0 +1,7 @@
+remote_display_error_get_type
+remote_display_manager_get_type
+remote_display_manager_new
+remote_display_error_quark
+remote_display_device_get_type
+remote_display_device_to_string
+remote_display_device_get_name

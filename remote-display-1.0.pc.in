@@ -1,0 +1,13 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+apiversion=@REMOTE_DISPLAY_API_VERSION@
+
+Name: remote-display
+Description: Helper library for the Yahoo! Place Finder service
+Version: @VERSION@
+Requires: gio-2.0
+Libs: -L${libdir} -lremote-display
+Cflags: -I${includedir}/remote-display-${apiversion}

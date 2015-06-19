@@ -1,0 +1,14 @@
+remote-display is a convenience library for display media, such as videos
+and photos through various remote display technologies such as UPnP/DLNA and
+Airplay.
+
+Requirements
+------------
+
+remote-display requires Avahi, libplist and libsoup to compile and run.
+
+libsoup patch required:
+https://bugzilla.gnome.org/show_bug.cgi?id=637387
+glib patch required:
+https://bugzilla.gnome.org/show_bug.cgi?id=639078
+
