@@ -295,10 +295,13 @@ remote_display_device_airplay_set_password (RemoteDisplayDeviceAirplay *device,
 }
 
 RemoteDisplayDevice *
-remote_display_device_airplay_new (const char      *name,
-				   AvahiStringList *txt,
-				   const char      *host_name,
-				   guint16          port)
+remote_display_device_airplay_new (AvahiIfIndex        interface,
+				   AvahiProtocol       protocol,
+				   const char         *name,
+				   AvahiStringList    *txt,
+				   const char         *host_name,
+				   const AvahiAddress *address,
+				   guint16             port)
 {
 	RemoteDisplayDeviceAirplay *device;
 	AvahiStringList *l;

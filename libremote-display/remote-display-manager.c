@@ -77,7 +77,7 @@ on_resolve_callback (AvahiServiceResolver *r,
 	case AVAHI_RESOLVER_FOUND: {
 			RemoteDisplayDevice *device;
 
-			device = remote_display_device_airplay_new (name, txt, host_name, port);
+			device = remote_display_device_airplay_new (interface, protocol, name, txt, host_name, address, port);
 			if (device) {
 				g_hash_table_insert (priv->known_devices, g_strdup (name), device);
 				g_signal_emit (self, signals[DEVICE_APPEARED], 0, device);

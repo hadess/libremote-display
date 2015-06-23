@@ -22,15 +22,19 @@
 #include <glib-object.h>
 #include <libremote-display/remote-display-device.h>
 #include <avahi-common/strlst.h>
+#include <avahi-common/address.h>
 
 G_BEGIN_DECLS
 
 #define REMOTE_DISPLAY_TYPE_DEVICE_AIRPLAY remote_display_device_airplay_get_type ()
 G_DECLARE_FINAL_TYPE (RemoteDisplayDeviceAirplay, remote_display_device_airplay, REMOTE_DISPLAY, DEVICE_AIRPLAY, RemoteDisplayDevice)
 
-RemoteDisplayDevice *remote_display_device_airplay_new           (const char                 *name,
+RemoteDisplayDevice *remote_display_device_airplay_new           (AvahiIfIndex                interface,
+								  AvahiProtocol               protocol,
+								  const char                 *name,
 							          AvahiStringList            *txt,
 								  const char                 *host_name,
+								  const AvahiAddress         *address,
 								  guint16                     port);
 char                *remote_display_device_airplay_add_to_string (RemoteDisplayDeviceAirplay *device,
 								  GString                    *s);
