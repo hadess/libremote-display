@@ -18,6 +18,19 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <arpa/inet.h>
+#include <net/if.h>
+
+#define _GNU_SOURCE     /* To get defns of NI_MAXSERV and NI_MAXHOST */
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <ifaddrs.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <linux/if_link.h>
+
 #include <gio/gio.h>
 #include <libsoup/soup.h>
 #include <plist/plist.h>
@@ -294,6 +307,121 @@ remote_display_device_airplay_set_password (RemoteDisplayDeviceAirplay *device,
 	device->password = g_strdup (password);
 }
 
+static GSocketAddress *
+avahi_address_to_gsocket_address (const AvahiAddress *address,
+				  AvahiIfIndex        interface)
+{
+	/* Note that this zeroes out the port, as we don't know which
+	 * port the requests are going to be coming from */
+	switch (address->proto) {
+	case AVAHI_PROTO_INET: {
+		struct sockaddr_in sockaddr4;
+		sockaddr4.sin_family = AF_INET;
+		sockaddr4.sin_port = htons (0);
+		/* ->address is already in network byte order */
+		sockaddr4.sin_addr.s_addr = address->data.ipv4.address;
+		return g_socket_address_new_from_native (&sockaddr4, sizeof(struct sockaddr_in));
+		}
+		break;
+	case AVAHI_PROTO_INET6: {
+		struct sockaddr_in6 sockaddr6;
+		sockaddr6.sin6_family = AF_INET6;
+		sockaddr6.sin6_port = htons (0);
+		memcpy (sockaddr6.sin6_addr.s6_addr, address->data.ipv6.address, 16);
+		sockaddr6.sin6_flowinfo = 0;
+		sockaddr6.sin6_scope_id = interface;
+		return g_socket_address_new_from_native (&sockaddr6, sizeof(struct sockaddr_in6));
+		}
+		break;
+	default:
+		g_assert_not_reached ();
+	}
+}
+
+static GInetAddress *
+avahi_address_to_address (const AvahiAddress *address,
+			  AvahiIfIndex        interface)
+{
+	GSocketAddress *sock_addr;
+	GInetAddress *addr;
+
+	sock_addr = avahi_address_to_gsocket_address (address, interface);
+	if (!sock_addr)
+		return NULL;
+
+	addr = g_inet_socket_address_get_address (G_INET_SOCKET_ADDRESS (sock_addr));
+	g_object_ref (addr);
+	g_object_unref (sock_addr);
+
+	return addr;
+}
+
+static int
+avahi_protocol_to_family (AvahiProtocol protocol)
+{
+	switch (protocol) {
+	case AVAHI_PROTO_INET:
+		return AF_INET;
+		break;
+	case AVAHI_PROTO_INET6:
+		return AF_INET6;
+		break;
+	default:
+		g_assert_not_reached ();
+	}
+}
+
+static GInetAddress *
+get_local_address (AvahiIfIndex  interface,
+		   AvahiProtocol protocol)
+{
+	GInetAddress *address = NULL;
+	struct ifaddrs *ifaddr, *ifa;
+	int n;
+	char ifname[IF_NAMESIZE];
+
+	if (!if_indextoname (interface, (char *) &ifname)) {
+		g_warning ("if_indextoname failed for %d", interface);
+		return NULL;
+	}
+
+	if (getifaddrs (&ifaddr) == -1) {
+		g_warning ("getifaddrs failed");
+		return NULL;
+	}
+
+	for (ifa = ifaddr, n = 0; ifa != NULL; ifa = ifa->ifa_next, n++) {
+		char host[NI_MAXHOST];
+		int family, s;
+
+		if (ifa->ifa_addr == NULL)
+			continue;
+		if (g_strcmp0 (ifa->ifa_name, ifname) != 0)
+			continue;
+		family = ifa->ifa_addr->sa_family;
+		if (family != avahi_protocol_to_family (protocol)) {
+			g_message ("%d != %d", ifa->ifa_addr->sa_family, protocol);
+			continue;
+		}
+
+		s = getnameinfo (ifa->ifa_addr,
+				 (family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6),
+				 host, NI_MAXHOST,
+				 NULL, 0, NI_NUMERICHOST);
+		if (s != 0) {
+			g_warning ("Failed to get address from interface details");
+			continue;
+		}
+
+		address = g_inet_address_new_from_string (host);
+		break;
+	}
+
+	freeifaddrs (ifaddr);
+
+	return address;
+}
+
 RemoteDisplayDevice *
 remote_display_device_airplay_new (AvahiIfIndex        interface,
 				   AvahiProtocol       protocol,
@@ -309,6 +437,19 @@ remote_display_device_airplay_new (AvahiIfIndex        interface,
 	char *device_id = NULL;
 	gboolean password_protected = FALSE;
 	RemoteDisplayDeviceCapabilities caps;
+	GInetAddress *remote_address, *local_address;
+
+	remote_address = avahi_address_to_address (address, interface);
+	if (!remote_address) {
+		g_warning ("Couldn't get remote address");
+		return NULL;
+	}
+	local_address = get_local_address (interface, protocol);
+	if (!local_address) {
+		g_clear_object (&remote_address);
+		g_warning ("Couldn't get local address");
+		return NULL;
+	}
 
 	/* Collect the features */
 	for (l = txt; l != NULL; l = avahi_string_list_get_next(l)) {
@@ -356,6 +497,8 @@ remote_display_device_airplay_new (AvahiIfIndex        interface,
 	device->hostname = g_strdup (host_name);
 	device->port = port;
 	device->features = features;
+	g_clear_object (&remote_address);
+	g_clear_object (&local_address);
 
 	return REMOTE_DISPLAY_DEVICE (device);
 }
