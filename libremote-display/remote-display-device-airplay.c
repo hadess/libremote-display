@@ -301,7 +301,7 @@ revhttp_cb (GObject *object,
 
 void
 remote_display_device_airplay_set_password (RemoteDisplayDeviceAirplay *device,
-					    const char          *password)
+					    const char                 *password)
 {
 	g_return_if_fail (REMOTE_DISPLAY_IS_DEVICE_AIRPLAY (device));
 
@@ -454,7 +454,7 @@ remote_display_device_airplay_new (AvahiIfIndex        interface,
 	}
 
 	/* Collect the features */
-	for (l = txt; l != NULL; l = avahi_string_list_get_next(l)) {
+	for (l = txt; l != NULL; l = avahi_string_list_get_next (l)) {
 		char *key, *value;
 
 		avahi_string_list_get_pair (l, &key, &value, NULL);
