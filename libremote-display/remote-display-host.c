@@ -318,12 +318,10 @@ remote_display_host_file (RemoteDisplayHost *host,
 	g_checksum_update (checksum, (const guchar *) uri, strlen (uri));
 	str = g_checksum_get_string (checksum);
 
-	//FIXME add suffix and get mime type
-
 	file = g_new0 (RemoteDisplayHostFile, 1);
 	file->uri = g_strdup (uri);
 	file->path = path;
-	file->mime_type = g_strdup ("video/mp4");
+	file->mime_type = g_content_type_guess (file->path, NULL, 0, NULL);
 
 	g_hash_table_insert (priv->files, g_strdup (str), file);
 
