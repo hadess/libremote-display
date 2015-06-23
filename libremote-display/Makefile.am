@@ -17,7 +17,9 @@ libremote_display_la_SOURCES =				\
 	remote-display-private.h			\
 	remote-display-device-private.h			\
 	remote-display-device-airplay.c			\
-	remote-display-device-airplay.h
+	remote-display-device-airplay.h			\
+	remote-display-host.h				\
+	remote-display-host.c
 
 libremote_display_la_LIBADD = $(REMOTE_DISPLAY_LIBS) $(LIBS)
 

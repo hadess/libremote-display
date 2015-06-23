@@ -42,11 +42,13 @@
 #include <libremote-display/remote-display-device-private.h>
 #include <libremote-display/remote-display-private.h>
 #include <libremote-display/remote-display-device-airplay.h>
+#include <libremote-display/remote-display-host.h>
 
 struct _RemoteDisplayDeviceAirplay {
 	GObject parent_instance;
 
 	GCancellable *cancellable;
+	RemoteDisplayHost *host;
 
 	char *hostname;
 	guint port;
@@ -497,6 +499,7 @@ remote_display_device_airplay_new (AvahiIfIndex        interface,
 	device->hostname = g_strdup (host_name);
 	device->port = port;
 	device->features = features;
+	device->host = remote_display_host_new (remote_address, local_address);
 	g_clear_object (&remote_address);
 	g_clear_object (&local_address);
 
@@ -518,7 +521,7 @@ remote_display_device_airplay_open_and_play (RemoteDisplayDeviceAirplay *device,
 
 	action = g_new0 (RemoteDisplayDeviceAirplayAction, 1);
 	action->type = REMOTE_DISPLAY_DEVICE_ACTION_PLAY;
-	action->uri = g_strdup (uri);
+	action->uri = remote_display_host_file (device->host, uri, NULL);
 	action->value = orig_position;
 
 	g_queue_push_tail (device->actions, action);
