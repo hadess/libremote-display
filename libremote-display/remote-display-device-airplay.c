@@ -401,10 +401,8 @@ get_local_address (AvahiIfIndex  interface,
 		if (g_strcmp0 (ifa->ifa_name, ifname) != 0)
 			continue;
 		family = ifa->ifa_addr->sa_family;
-		if (family != avahi_protocol_to_family (protocol)) {
-			g_message ("%d != %d", ifa->ifa_addr->sa_family, protocol);
+		if (family != avahi_protocol_to_family (protocol))
 			continue;
-		}
 
 		s = getnameinfo (ifa->ifa_addr,
 				 (family == AF_INET) ? sizeof(struct sockaddr_in) : sizeof(struct sockaddr_in6),
