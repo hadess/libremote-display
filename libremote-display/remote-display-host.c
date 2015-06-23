@@ -25,6 +25,7 @@
 typedef struct {
 	GMappedFile *mapped_file;
 	char *uri;
+	char *path;
 	char *mime_type;
 } RemoteDisplayHostFile;
 
@@ -136,6 +137,7 @@ static void
 file_free (RemoteDisplayHostFile *file)
 {
 	g_free (file->uri);
+	g_free (file->path);
 	g_free (file->mime_type);
 	g_mapped_file_unref (file->mapped_file);
 	g_free (file);
@@ -193,13 +195,7 @@ server_callback (SoupServer        *server,
 	}
 
 	if (!file->mapped_file) {
-		char *path;
-
-		path = g_filename_from_uri (file->uri, NULL, NULL);
-		//FIXME uri
-		file->mapped_file = g_mapped_file_new (path, FALSE, NULL);
-		g_free (path);
-
+		file->mapped_file = g_mapped_file_new (file->path, FALSE, NULL);
 		if (!file->mapped_file) {
 			soup_message_set_status (msg, SOUP_STATUS_NOT_FOUND);
 			return;
@@ -279,14 +275,31 @@ remote_display_host_file (RemoteDisplayHost *host,
 	RemoteDisplayHostFile *file;
 	GChecksum *checksum;
 	const char *str;
-	char *ret;
+	char *path, *scheme, *ret;
+	GFile *gfile;
 
 	g_return_val_if_fail (REMOTE_DISPLAY_IS_HOST (host), FALSE);
 	g_return_val_if_fail (uri != NULL, FALSE);
 
 	priv = GET_PRIVATE (host);
 
-	//FIXME if http or https, just pass the URL
+	scheme = g_uri_parse_scheme (uri);
+	if (g_strcmp0 (scheme, "http") == 0 ||
+	    g_strcmp0 (scheme, "https") == 0) {
+		g_debug ("Not serving %s", uri);
+		g_free (scheme);
+		return g_strdup (uri);
+	}
+	g_free (scheme);
+
+	gfile = g_file_new_for_uri (uri);
+	path = g_file_get_path (gfile);
+	g_object_unref (gfile);
+	if (!path) {
+		g_set_error (error, G_IO_ERROR, G_IO_ERROR_NOT_SUPPORTED,
+			     "Cannot serve URI '%s'", uri);
+		return NULL;
+	}
 
 	if (!priv->server_started) {
 		GSocketAddress *addr;
@@ -294,6 +307,7 @@ remote_display_host_file (RemoteDisplayHost *host,
 		addr = g_inet_socket_address_new (priv->local_address, 0);
 		if (!soup_server_listen (priv->server, addr, 0, error)) {
 			g_clear_object (&addr);
+			g_free (path);
 			return FALSE;
 		}
 		g_object_unref (addr);
@@ -308,6 +322,7 @@ remote_display_host_file (RemoteDisplayHost *host,
 
 	file = g_new0 (RemoteDisplayHostFile, 1);
 	file->uri = g_strdup (uri);
+	file->path = path;
 	file->mime_type = g_strdup ("video/mp4");
 
 	g_hash_table_insert (priv->files, g_strdup (str), file);
