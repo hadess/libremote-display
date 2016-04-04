@@ -528,7 +528,7 @@ remote_display_device_airplay_open_and_play (RemoteDisplayDeviceAirplay *device,
 		SoupSession *session;
 		SoupMessage *msg;
 
-		device->session_id = g_uuid_random ();
+		device->session_id = g_uuid_string_random ();
 
 		session = soup_session_new ();
 		//FIXME set user-agent
