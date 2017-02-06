@@ -59,7 +59,7 @@ GTK_DOC_CHECK([1.13],[--flavour no-tmpl])
 AC_CHECK_LIB([m],[atan2])
 
 dnl Requires for the library
-PKG_CHECK_MODULES(REMOTE_DISPLAY, avahi-gobject avahi-glib avahi-client libsoup-2.4 libplist)
+PKG_CHECK_MODULES(REMOTE_DISPLAY, glib-2.0 >= 2.51.1 avahi-gobject avahi-glib avahi-client libsoup-2.4 libplist)
 
 GLIB_GENMARSHAL=`$PKG_CONFIG --variable=glib_genmarshal glib-2.0`
 AC_SUBST(GLIB_GENMARSHAL)
